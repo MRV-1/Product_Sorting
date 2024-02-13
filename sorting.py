@@ -3,7 +3,7 @@
 ###################################################
 
 ###################################################
-# Uygulama: Kurs Sıralama
+# Application : Course Sorting
 ###################################################
 import pandas as pd
 import math
@@ -15,14 +15,13 @@ pd.set_option('display.max_rows', None)
 pd.set_option('display.expand_frame_repr', False)
 pd.set_option('display.float_format', lambda x: '%.5f' % x)
 
-df = pd.read_csv(r"C:\Users\MerveATASOY\Desktop\data_scientist_miuul\egitim_teorik_icerikler\Bolum_5_Measurement_Problems\datasets\product_sorting.csv")
+df = pd.read_csv(r"datasets\product_sorting.csv")
 print(df.shape)
 df.head(10)
 
-#buradaki comment count veri setinin 5,4,3,2,1 puanlarının toplamından oluşmaktadır. Ama veri ile biraz oynanamış küsüratlar yok edilmiş dolayısıyla detaya inildiğinde toplamı olmayabilir
-
-#Buradaki amaç bu ürünleri sıralamaya çalışma esnasında ne gibi problemlerle karşılaşıldığını incelemek.
-#Bu incelemeler neticesinde kendimize özel bir sıralama yaklaşımı geliştireceeğiz ve bunun bilimsel formunu istatistiksel yöntem ile ele almış olacağız.
+# The comment count here is the sum of the 5,4,3,2,1 points of the dataset. But the data has been tampered with a bit and the fractions have been removed, so it may not be the sum when you drill down
+# The aim here is to examine what problems are encountered when trying to rank these products.
+# As a result of these examinations, we will develop a special ranking approach for ourselves and we will handle the scientific form of this with the statistical method.
 
 ####################
 # Sorting by Rating
@@ -31,18 +30,12 @@ df.head(10)
 
 df.sort_values("rating", ascending=False).head(20)
 
-#1. problem --> birinci gözlemlediğimiz durum alakasız sonuçlarında gelmesi
-#2. problem -->satın alma sayısı açısından daha yüksek olan kurslar olmasına rağmen alt satırlarda yer alıyor 'Course_1' dolayısıyla satın alma sayısı ve yorum sayısı bir şekilde rating altında ezilmiş
-#Puanı yüksek olana göre sıraladığımızda 2 faktör gözden kaçmış gibi duruyor satın alma sayısı ve yorum
-#Sosyal ispatı en ciddi etkileyen faktörler satın alma sayısı ve yorumdu, 5 puana sahip olup 3 yorum almış bir kurs ile,10bin yorum almış ama 4.5 ortalamaya sahip iki kurs söz konusu olduğunda 2. terih edilecektir.
-#Öyle birşey yapılmalı ki hem satın alma sayısı, hem yorum, hemde puan göz önünde bulundurulabilsin
-
 ####################
 # Sorting by Comment Count or Purchase Count
 ####################
-#satın alma sayısına göre sıralandığında, satın alma yüksek olsa da kötü kurslarıda yukarı çıkarmak istemiyor olabilirim, bir şekilde kullanıcının da memnun olacağı kurslara yönelmesini isteyebilirim
-#puanı ve yorumları doğru sunmak önemli bir başlık ama kullanıcı memnuniyetini düşünerek sıralama yapıldığında bir şekilde iyi olabilecek ürünleri öne çıkarmakta bir iş kararı olabilir
 
+# When ranked by number of purchases, I may not want to put bad courses up even if the number of purchases is high, I may want the user to somehow go for courses that they will be satisfied with.
+# Getting the rating and reviews right is an important topic, but it can be a business decision to highlight products that might be good in some way when ranked with user satisfaction in mind.
 
 df.sort_values("purchase_count", ascending=False).head(20)
 df.sort_values("commment_count", ascending=False).head(20)
@@ -50,18 +43,11 @@ df.sort_values("commment_count", ascending=False).head(20)
 ####################
 # Sorting by Rating, Comment and Purchase
 ####################
-#üç metriğide standartlaştırıp, aynı anda sıralama yapabiliyor olmayı hedefliyoruz.
-#örneğin üç metrik çarpılarak bir değer elde edilebilir ama, ölçekleri aynı olmadığı için çok basamaklı olan metrikler diğer metrikleri ezecektir
-#hepsini aynı ölçü aralığına getirelim --> Rating 1-5 arasındaki değerlerden oluşuyor dolayısıyla diğer değişkenleri de 1-5 arasındaki sayılara dönüştürelim
-
-
+# We aim to standardize all three metrics and be able to sort at the same time.
 
 df["purchase_count_scaled"] = MinMaxScaler(feature_range=(1, 5)). \
     fit(df[["purchase_count"]]). \
     transform(df[["purchase_count"]])
-#fit ardından transform yapısının kullanılması, geliştirici bir şekildee fit ettiği aşamada araya girmek isterse kolaylık sağlamaktadır. fit_transfrom methodu kullanılırsa bu mümkün olmayacaktır
-#bazı işlemler için fit ve transform birlikte kullanılırken bazen ayrı ayrı kullanılmaktadır
-
 
 df.describe().T
 
@@ -69,19 +55,13 @@ df["comment_count_scaled"] = MinMaxScaler(feature_range=(1, 5)). \
     fit(df[["commment_count"]]). \
     transform(df[["commment_count"]])
 
-#bu değişkenler aynı cinsten olduğu için bunların ortalaması alınabilir, ağırlıklandırılabilir
 
-#her bir değişkenin ağırlıkları farklı şekilde oluşturuldu
+# The weights of each variable were created differently
 
 (df["comment_count_scaled"] * 32 / 100 +
  df["purchase_count_scaled"] * 26 / 100 +
  df["rating"] * 42 / 100)
-#burada elde edilen değerler artık birçok faktörün ağırlığı ile oluşturulan score'lara dönüştürüldü
 
-#satın alma önemli fakat bu satın almaların bazıları kurslar ücretsiz verilerek elde ediliyor olabilir, buda bir şekilde social proof'u etkileyeceği için yanılgı durumunu ortaya çıkartabilir.
-#ama yorum daha farklı,  ücretli ya da ücretsiz olsa dahi kursa yapılan yorumlar kursun içeriğinin kalitesini ifade ediyor olacaktır
-#bu yorumlar neticesinde şöyle karar veriyorum,  benim için önemli olan rating'dir zaten comment_count_scaled ve purchase_count_scaled etkisini içerisinde tutuyor olacaktır
-#buraya sosyal ispatı güçlendirecek bir eylem bırakılmalıdır
 
 def weighted_sorting_score(dataframe, w1=32, w2=26, w3=42):
     return (dataframe["comment_count_scaled"] * w1 / 100 +
@@ -92,6 +72,7 @@ def weighted_sorting_score(dataframe, w1=32, w2=26, w3=42):
 df["weighted_sorting_score"] = weighted_sorting_score(df)
 
 df.sort_values("weighted_sorting_score", ascending=False).head(20)
+
 #bu tabloda elde edilen değerler güvenilirdir, 3 farklı yapı ağırlıklandırılarak bu sonuç elde edildi
 
 df[df["course_name"].str.contains("Veri Bilimi")].sort_values("weighted_sorting_score", ascending=False).head(20)
